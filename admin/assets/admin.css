@@ -1,0 +1,104 @@
+/*!
+ * Rédactio — admin.css
+ * @copyright 2026 Guillaume JEUDY
+ * @license   GNU GPL v3
+ */
+
+/* ── Panneau principal ─────────────────────────────────────────────────────── */
+.redactio-panel {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-top: none;
+	padding: 16px 20px 20px;
+}
+
+/* ── Barre de progression ──────────────────────────────────────────────────── */
+.redactio-bar-track {
+	background: #e0e0e0;
+	border-radius: 4px;
+	height: 10px;
+	overflow: hidden;
+	margin-bottom: 4px;
+}
+
+.redactio-bar-fill {
+	background: #00a32a;
+	height: 100%;
+	width: 0%;
+	transition: width 0.4s ease;
+}
+
+.redactio-bar-fill--orange { background: #f0a500; }
+.redactio-bar-fill--red    { background: #d63638; }
+
+/* ── Notice flottante (listes WP) ─────────────────────────────────────────── */
+#redactio-floating-notice {
+	position: fixed;
+	top: 32px;
+	right: 20px;
+	z-index: 99999;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-left: 4px solid #00a32a;
+	border-radius: 4px;
+	padding: 12px 16px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+	min-width: 300px;
+	max-width: 420px;
+	display: none;
+}
+
+#redactio-floating-notice .redactio-bar-track { margin-top: 8px; }
+
+/* ── Badges scores Yoast ──────────────────────────────────────────────────── */
+.redactio-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+}
+
+.redactio-badge--green  { background: #d4edda; color: #155724; }
+.redactio-badge--orange { background: #fff3cd; color: #856404; }
+.redactio-badge--red    { background: #f8d7da; color: #721c24; }
+.redactio-badge--grey   { background: #e9ecef; color: #6c757d; }
+
+/* ── Type badge ────────────────────────────────────────────────────────────── */
+.redactio-type-badge {
+	display: inline-block;
+	background: #f0f0f1;
+	color: #3c434a;
+	border-radius: 3px;
+	font-size: 11px;
+	padding: 2px 6px;
+}
+
+/* ── Tableau ───────────────────────────────────────────────────────────────── */
+.redactio-table td,
+.redactio-table th {
+	vertical-align: middle;
+}
+
+.redactio-table td:last-child {
+	white-space: nowrap;
+}
+
+/* ── Logs ──────────────────────────────────────────────────────────────────── */
+.redactio-logs-wrap {
+	font-family: monospace;
+	font-size: 12px;
+	background: #1e1e1e;
+	color: #d4d4d4;
+	padding: 12px;
+	border-radius: 4px;
+	max-height: 500px;
+	overflow-y: auto;
+	line-height: 1.6;
+}
+
+.redactio-log-line { margin: 0; padding: 1px 0; }
+.redactio-log--error   { color: #f48771; }
+.redactio-log--warning { color: #dcdcaa; }
+.redactio-log--debug   { color: #9cdcfe; }

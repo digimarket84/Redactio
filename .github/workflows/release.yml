@@ -1,0 +1,46 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build ZIP
+        run: |
+          mkdir -p dist/redactio
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='dist' \
+                    --exclude='*.log' \
+                    --exclude='node_modules' \
+                    . dist/redactio/
+          cd dist
+          zip -r redactio-${{ steps.version.outputs.VERSION }}.zip redactio/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Rédactio v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Rédactio v${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+            1. Télécharger `redactio-${{ steps.version.outputs.VERSION }}.zip`
+            2. WordPress Admin → Extensions → Ajouter → Téléverser le fichier ZIP
+            3. Activer le plugin
+            4. Réglages → Rédactio → saisir la clé API Claude
+          files: dist/redactio-${{ steps.version.outputs.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
