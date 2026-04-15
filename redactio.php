@@ -11,7 +11,7 @@
  * Plugin Name:       Rédactio
  * Plugin URI:        https://github.com/digimarket84/Redactio
  * Description:       Améliorez la lisibilité et le SEO de vos articles et pages grâce à l'IA Claude (Anthropic). Tableau de bord avec scores Yoast, amélioration en un clic, mises à jour automatiques.
- * Version:           1.0.0
+ * Version:           1.0.4
  * Requires at least: 5.6
  * Requires PHP:      7.4
  * Author:            Guillaume JEUDY
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'REDACTIO_VERSION', '1.0.0' );
+define( 'REDACTIO_VERSION', '1.0.4' );
 define( 'REDACTIO_BUILD',   4 );       // Incrémenté à chaque commit — identifie le build exact.
 define( 'REDACTIO_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'REDACTIO_URL',     plugin_dir_url( __FILE__ ) );
