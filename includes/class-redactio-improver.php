@@ -17,7 +17,7 @@ class Redactio_Improver {
 	const API_ENDPOINT     = 'https://api.anthropic.com/v1/messages';
 	const API_VERSION      = '2023-06-01';
 	const DEFAULT_MODEL    = 'claude-opus-4-5';
-	const MAX_RETRIES      = 2;
+	const MAX_RETRIES      = 3;
 	const RETRY_BASE_DELAY = 2;
 	const CHUNK_THRESHOLD  = 25000;
 	const MIN_CHUNK_SIZE   = 3000;
@@ -256,26 +256,27 @@ class Redactio_Improver {
 
 	private static function get_readability_prompt(): string {
 		return "Tu es un rédacteur expert pour le blog tech francophone GeekLabo.fr, spécialisé en domotique.\n"
-			. "Améliore la lisibilité du texte HTML ci-dessous, déjà en français.\n\n"
-			. "Règles STRICTES :\n"
-			. "- Préserve INTÉGRALEMENT tout le HTML (balises, attributs, href, src, classes, data-*)\n"
+			. "Réécris le texte HTML ci-dessous pour en améliorer significativement la lisibilité.\n\n"
+			. "Règles ABSOLUES (ne jamais enfreindre) :\n"
+			. "- Préserve INTÉGRALEMENT toutes les balises HTML et leurs attributs (href, src, class, id, data-*, style…)\n"
+			. "- Préserve INTÉGRALEMENT tous les commentaires WordPress Gutenberg (<!-- wp:... --> et <!-- /wp:... -->) sans les modifier d'un seul caractère\n"
+			. "- Ne supprime, n'ajoute et ne déplace aucune image (<img>), aucun lien (<a>), aucune balise structurelle (<h2>, <h3>, <ul>, <ol>…)\n"
 			. "- Ne traduis rien — le texte est déjà en français\n"
-			. "- Ne supprime, n'ajoute et ne déplace aucune image, aucun lien, aucune balise structurelle\n"
-			. "- Garde tous les noms propres et termes techniques : Home Assistant, ESPHome, Zigbee, Matter, Thread, MQTT, etc.\n"
-			. "- Retourne UNIQUEMENT le HTML amélioré, sans markdown, sans commentaire\n\n"
-			. "Améliorations à apporter :\n"
-			. "- Raccourcir les phrases trop longues (>30 mots) en deux phrases claires\n"
-			. "- Ajouter des mots de liaison naturels (ainsi, cependant, en outre, par exemple…)\n"
-			. "- Rendre l'introduction plus accrocheuse et directe\n"
-			. "- Remplacer les tournures passives et lourdes par des formulations actives\n"
-			. "- Varier le début des phrases pour éviter la répétition\n"
-			. "- Maintenir un ton technique mais accessible, adapté à des passionnés de domotique";
+			. "- Garde les noms propres et termes techniques exacts : Home Assistant, ESPHome, Zigbee, Matter, Thread, MQTT, Z-Wave, etc.\n"
+			. "- Retourne UNIQUEMENT le HTML, sans balise <html>/<body>/<head>, sans markdown, sans explication\n\n"
+			. "Améliorations OBLIGATOIRES (tu dois les appliquer partout où c'est possible) :\n"
+			. "1. COUPER les phrases longues (>25 mots) en deux phrases distinctes et claires — c'est la priorité absolue\n"
+			. "2. REMPLACER les tournures passives (« est utilisé par », « a été créé ») par des formulations actives directes\n"
+			. "3. AJOUTER des mots de liaison (ainsi, cependant, en outre, par conséquent, c'est pourquoi, en pratique…)\n"
+			. "4. VARIER le début des phrases — interdire deux phrases consécutives commençant par le même mot\n"
+			. "5. RENDRE l'introduction de chaque section plus accrocheuse et directe\n"
+			. "6. MAINTENIR un ton technique mais accessible pour des passionnés de domotique";
 	}
 
 	private static function get_chunk_readability_prompt( int $index, int $total ): string {
 		return self::get_readability_prompt()
-			. "\n- Ceci est la partie {$index}/{$total} d'un article découpé — NE PAS ajouter d'introduction ni de conclusion."
-			. "\n- Retourner UNIQUEMENT le HTML de cette section, sans balise <html>, <body> ou <head>.";
+			. "\n\nContexte : ceci est la PARTIE {$index}/{$total} d'un article plus long — ne pas ajouter d'introduction ni de conclusion."
+			. "\nRetourne UNIQUEMENT le HTML de cette section, sans aucune balise englobante (<html>, <body>, <head>).";
 	}
 
 	private static function get_seo_prompt(): string {
@@ -345,10 +346,13 @@ class Redactio_Improver {
 			$code = wp_remote_retrieve_response_code( $response );
 
 			if ( 200 !== $code ) {
-				if ( 429 === $code ) {
-					$retry_after = (int) ( wp_remote_retrieve_header( $response, 'retry-after' ) ?: 60 );
-					Redactio_Logger::warning( "API — 429 Rate Limit, attente {$retry_after}s." );
-					$last_error = new WP_Error( 'api_rate_limit', "Rate limit (429) — Retry-After : {$retry_after}s." );
+				if ( 429 === $code || 529 === $code ) {
+					$retry_after = ( 429 === $code )
+						? (int) ( wp_remote_retrieve_header( $response, 'retry-after' ) ?: 60 )
+						: 45;
+					$label = ( 429 === $code ) ? 'Rate Limit (429)' : 'Overloaded (529)';
+					Redactio_Logger::warning( "API — {$label}, attente {$retry_after}s." );
+					$last_error = new WP_Error( 'api_throttled', "{$label} — Retry dans {$retry_after}s." );
 					if ( $attempt < self::MAX_RETRIES ) {
 						sleep( $retry_after );
 					}

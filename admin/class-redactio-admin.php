@@ -187,10 +187,15 @@ class Redactio_Admin {
 			wp_send_json_error( $update->get_error_message() );
 		}
 
+		// Invalider le score Yoast périmé — il sera recalculé lors de la prochaine sauvegarde via l'éditeur.
+		if ( defined( 'WPSEO_VERSION' ) ) {
+			delete_post_meta( $post_id, '_yoast_wpseo_content_score' );
+		}
+
 		Redactio_Logger::info( "Post #{$post_id} mis à jour avec succès." );
 
 		wp_send_json_success( [
-			'message' => __( '✅ Lisibilité améliorée et article mis à jour.', 'redactio' ),
+			'message' => __( '✅ Lisibilité améliorée. Ouvre l\'article dans l\'éditeur et sauvegarde pour rafraîchir le score Yoast.', 'redactio' ),
 		] );
 	}
 
