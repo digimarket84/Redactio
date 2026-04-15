@@ -82,44 +82,79 @@ class Redactio_Updater {
 			wp_send_json_error( __( 'Permission insuffisante.', 'redactio' ), 403 );
 		}
 
-		$info = self::get_update_info();
+		$info    = self::get_update_info();
 		$version = $info['remote_version'];
 		$zip_url = sprintf( self::RELEASE_ZIP_URL, $version, $version );
 
 		Redactio_Logger::info( "Force install depuis : {$zip_url}" );
 
-		// Inclure les classes WordPress nécessaires.
-		if ( ! function_exists( 'request_filesystem_credentials' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-		}
+		// ── 1. Charger les helpers WP nécessaires ─────────────────────────────
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/misc.php';
 		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 
-		WP_Filesystem();
+		// ── 2. Initialiser WP_Filesystem en mode direct ───────────────────────
+		add_filter( 'filesystem_method', static function () { return 'direct'; } );
+		$fs_ok = WP_Filesystem();
+		remove_all_filters( 'filesystem_method' );
 
-		$skin     = new WP_Ajax_Upgrader_Skin();
-		$upgrader = new Plugin_Upgrader( $skin );
-		$result   = $upgrader->install( $zip_url );
-
-		if ( is_null( $result ) ) {
-			wp_send_json_error( __( 'Échec de l\'installation — résultat null (WP_Filesystem non initialisé ou ZIP inaccessible).', 'redactio' ) );
+		if ( ! $fs_ok ) {
+			Redactio_Logger::error( 'WP_Filesystem : accès direct refusé (permissions insuffisantes ?).' );
+			wp_send_json_error( __( 'Filesystem inaccessible — vérifiez les permissions du dossier wp-content/plugins.', 'redactio' ) );
 		}
 
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( $result->get_error_message() );
+		global $wp_filesystem;
+
+		// ── 3. Télécharger le ZIP ─────────────────────────────────────────────
+		$tmp_zip = download_url( $zip_url, 120 );
+
+		if ( is_wp_error( $tmp_zip ) ) {
+			Redactio_Logger::error( 'Téléchargement échoué : ' . $tmp_zip->get_error_message() );
+			wp_send_json_error( __( 'Téléchargement échoué : ', 'redactio' ) . $tmp_zip->get_error_message() );
 		}
 
-		if ( false === $result ) {
-			$messages = $skin->get_upgrade_messages();
-			wp_send_json_error( implode( ' | ', $messages ) ?: __( 'Échec inconnu.', 'redactio' ) );
+		Redactio_Logger::info( "ZIP téléchargé : {$tmp_zip}" );
+
+		// ── 4. Décompresser dans un dossier temporaire ────────────────────────
+		$upgrade_dir = WP_CONTENT_DIR . '/upgrade';
+		if ( ! is_dir( $upgrade_dir ) ) {
+			wp_mkdir_p( $upgrade_dir );
 		}
 
-		Redactio_Logger::info( "Force install réussie — v{$version} installée." );
+		$tmp_dir = $upgrade_dir . '/redactio-update-' . time();
+		$unzip   = unzip_file( $tmp_zip, $tmp_dir );
+		@unlink( $tmp_zip ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+
+		if ( is_wp_error( $unzip ) ) {
+			$wp_filesystem->delete( $tmp_dir, true );
+			Redactio_Logger::error( 'Décompression échouée : ' . $unzip->get_error_message() );
+			wp_send_json_error( __( 'Décompression échouée : ', 'redactio' ) . $unzip->get_error_message() );
+		}
+
+		// ── 5. Localiser le dossier source dans l'archive ────────────────────
+		$source = $tmp_dir . '/redactio';
+		if ( ! is_dir( $source ) ) {
+			// Chercher un sous-dossier unique (ex. redactio-1.0.0/).
+			$dirs = glob( $tmp_dir . '/*', GLOB_ONLYDIR );
+			$source = ! empty( $dirs ) ? $dirs[0] : $tmp_dir;
+		}
+
+		// ── 6. Copier vers le dossier du plugin ───────────────────────────────
+		$dest   = WP_PLUGIN_DIR . '/redactio';
+		$copied = copy_dir( $source, $dest );
+		$wp_filesystem->delete( $tmp_dir, true );
+
+		if ( is_wp_error( $copied ) ) {
+			Redactio_Logger::error( 'Copie échouée : ' . $copied->get_error_message() );
+			wp_send_json_error( __( 'Copie des fichiers échouée : ', 'redactio' ) . $copied->get_error_message() );
+		}
+
+		Redactio_Logger::info( "Force install réussie — v{$version} (build #{$info['remote_build']}) installée." );
 
 		wp_send_json_success( [
 			'message' => sprintf(
 				/* translators: %s: numéro de version */
-				__( '✅ Rédactio v%s installée avec succès. Rechargez la page.', 'redactio' ),
+				__( '✅ Rédactio v%s installée avec succès. Rechargez la page pour activer la nouvelle version.', 'redactio' ),
 				$version
 			),
 		] );
