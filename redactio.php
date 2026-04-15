@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'REDACTIO_VERSION', '1.0.0' );
-define( 'REDACTIO_BUILD',   3 );       // Incrémenté à chaque commit — identifie le build exact.
+define( 'REDACTIO_BUILD',   4 );       // Incrémenté à chaque commit — identifie le build exact.
 define( 'REDACTIO_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'REDACTIO_URL',     plugin_dir_url( __FILE__ ) );
 define( 'REDACTIO_SLUG',    'redactio' );

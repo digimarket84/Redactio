@@ -239,6 +239,9 @@ class Redactio_Admin {
 			update_post_meta( $post_id, '_yoast_wpseo_title',    sanitize_text_field( $seo['meta_title'] ) );
 			update_post_meta( $post_id, '_yoast_wpseo_metadesc', sanitize_text_field( $seo['meta_description'] ) );
 			update_post_meta( $post_id, '_yoast_wpseo_focuskw',  sanitize_text_field( $seo['focus_keyword'] ) );
+			// Invalider les scores périmés — recalculés par Yoast lors de la prochaine sauvegarde dans l'éditeur.
+			delete_post_meta( $post_id, '_yoast_wpseo_linkdex' );
+			delete_post_meta( $post_id, '_yoast_wpseo_content_score' );
 		}
 
 		// Mettre à jour les tags.
@@ -255,7 +258,7 @@ class Redactio_Admin {
 		) );
 
 		wp_send_json_success( [
-			'message'       => __( '✅ SEO régénéré avec succès.', 'redactio' ),
+			'message'       => __( '✅ SEO régénéré. Ouvre l\'article dans l\'éditeur et sauvegarde pour rafraîchir le score Yoast.', 'redactio' ),
 			'focus_keyword' => $seo['focus_keyword'] ?? '',
 			'meta_title'    => $seo['meta_title'] ?? '',
 			'tags'          => $tags,
